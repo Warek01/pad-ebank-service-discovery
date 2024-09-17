@@ -1,0 +1,12 @@
+@base = {{scheme}}://{{host}}:{{port}}
+
+### GET request to example server
+GET {{base}}
+
+###
+
+POST {{base}}/{{services_prefix}}/test
+Content-Type: application/json
+
+{
+}
