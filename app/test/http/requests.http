@@ -1,0 +1,21 @@
+@base = {{scheme}}://{{host}}:{{port}}
+
+### GET request to example server
+GET {{base}}
+
+### Register
+POST {{base}}/services/register
+Content-Type: application/json
+
+{
+  "serviceName": "test-service",
+  "serviceId": "test-service-1",
+  "url": "http://localhost:3000",
+  "healthcheck": {
+    "url": "http://localhost:3030/health",
+    "interval": 30
+  }
+}
+
+### Query
+GET {{base}}/services/test-service
