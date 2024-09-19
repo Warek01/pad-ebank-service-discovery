@@ -5,6 +5,7 @@ from flask_swagger_ui import get_swaggerui_blueprint
 
 from .routes import bp
 from .service import services_bp
+from .service.healthcheck_scheduler import healthcheck_scheduler_thread
 
 
 def create_app():
@@ -31,5 +32,7 @@ def create_app():
         os.makedirs(app.instance_path)
     except OSError:
         pass
+
+    healthcheck_scheduler_thread.start()
 
     return app
