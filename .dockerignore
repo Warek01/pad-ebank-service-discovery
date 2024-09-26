@@ -1,7 +1,6 @@
 instance/*
 !instance/.gitignore
 .webassets-cache
-.env
 __pycache__/
 *.py[cod]
 *$py.class

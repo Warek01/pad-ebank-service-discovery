@@ -1,8 +1,12 @@
-from flask import Blueprint, app
+import json
+from flask import Blueprint, app, send_from_directory, render_template, current_app
 
-bp = Blueprint('main', __name__)
+from app.service.registry import registry
+
+base_bp = Blueprint('main', __name__)
 
 
-@bp.route('/')
-def get():
-    return 'get'
+@base_bp.route('/')
+def serve_index():
+    current_app.logger.info(registry)
+    return render_template('index.jinja', registry=registry)

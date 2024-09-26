@@ -6,7 +6,7 @@
         "description": "Service Discovery API"
     },
     "paths": {
-        "/services/register": {
+        "/api/service/register": {
             "post": {
                 "summary": "Register a service instance",
                 "requestBody": {
@@ -56,7 +56,7 @@
                 }
             }
         },
-        "/services/shutdown": {
+        "/api/service/shutdown": {
             "post": {
                 "summary": "Delete a service from the registry",
                 "requestBody": {
@@ -117,7 +117,7 @@
                 }
             }
         },
-        "/services/{service_name}": {
+        "/api/service/{service_name}": {
             "get": {
                 "summary": "Get instances of a service",
                 "parameters": [

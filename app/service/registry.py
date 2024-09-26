@@ -2,36 +2,25 @@ import json
 import threading
 from typing import Optional
 
-from app.redis import get_redis_client
+from app.redis import redis_client
 
 
 class ServiceRegistry(dict[str, list[dict]]):
     pass
 
 
-_registry: Optional[ServiceRegistry] = None
-
 REGISTRY_CACHE_FIELD = 'service-discovery'
 
 registry_lock = threading.Lock()
 
-
-def get_registry() -> ServiceRegistry:
-    global _registry
-
-    if not _registry:
-        cache = get_redis_client()
-        cached_data = cache.get(REGISTRY_CACHE_FIELD)
-        _registry = json.loads(cached_data) if cached_data else ServiceRegistry()
-
-    return _registry
+_cached_data: Optional[str] = redis_client.get(REGISTRY_CACHE_FIELD)
+registry: ServiceRegistry = json.loads(_cached_data) if _cached_data else ServiceRegistry()
 
 
-def cache_registry():
-    global _registry
-    cache = get_redis_client()
+def cache_registry() -> None:
+    global registry
 
-    if not _registry:
-        cache.delete(REGISTRY_CACHE_FIELD)
+    if not registry:
+        redis_client.delete(REGISTRY_CACHE_FIELD)
     else:
-        cache.set(REGISTRY_CACHE_FIELD, json.dumps(_registry))
+        redis_client.set(REGISTRY_CACHE_FIELD, json.dumps(registry))
