@@ -1,12 +1,12 @@
+from time import time
 from flask import request, jsonify, current_app
 from flask.sansio.blueprints import Blueprint
 from pydantic import ValidationError
-from time import time
 
+from app.responses import RESPONSE_SUCCESS, RESPONSE_NOT_FOUND
 from app.service.dtos.request.register_dto import RegisterDto
 from app.service.dtos.request.shutdown_dto import ShutdownDto
 from app.service.registry import cache_registry, registry_lock, registry
-from app.responses import RESPONSE_SUCCESS, RESPONSE_NOT_FOUND
 
 
 def init_service_routes(services_bp: Blueprint) -> None:

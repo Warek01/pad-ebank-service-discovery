@@ -1,5 +1,4 @@
-import json
-from flask import Blueprint, app, send_from_directory, render_template, current_app
+from flask import Blueprint, render_template, current_app
 
 from app.service.registry import registry
 

@@ -1,8 +1,8 @@
 import os
 import sys
 import threading
-from threading import Thread, Event
 from signal import signal, SIGTERM, SIGINT
+from threading import Thread, Event
 from types import FrameType
 from flask import Flask
 from flask_swagger_ui import get_swaggerui_blueprint
