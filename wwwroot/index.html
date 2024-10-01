@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PAD service discovery API</title>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            font-family: sans-serif, Ubuntu;
+        }
+
+        #container {
+            padding: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        h3 {
+            margin: 0;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+<div id="container"></div>
+</body>
+
+<script>
+  let services = {};
+  fetchFn().then(update)
+  setInterval(fetchFn, 2000);
+
+  async function fetchFn() {
+    const req = await fetch('/api/v1/registry');
+    const res = await req.json();
+    services = {};
+
+    for (const service of res) {
+      if (!services[service.name]) {
+        services[service.name] = [service];
+      } else {
+        services[service.name].push(service);
+      }
+    }
+    update();
+  }
+
+  function update() {
+    const container = document.querySelector('#container');
+    container.innerHTML = '';
+
+    for (const serviceName in services) {
+      const heading = document.createElement('h3');
+      heading.textContent = serviceName;
+
+      const table = document.createElement('table');
+      table.setAttribute('border', '1');
+
+      const headerRow = document.createElement('tr');
+      const headers = ['No', 'Service ID', 'Service URL', 'Healthcheck URL', 'Check Interval'];
+
+      headers.forEach(headerText => {
+        const th = document.createElement('th');
+        th.textContent = headerText;
+        headerRow.append(th);
+      });
+
+      table.append(headerRow);
+
+      let i = 0;
+      for (const service of services[serviceName]) {
+        const row = document.createElement('tr');
+
+        const numberCell = document.createElement('td');
+        numberCell.textContent = ++i;
+
+        const idCell = document.createElement('td');
+        idCell.textContent = service.id;
+
+        const urlCell = document.createElement('td');
+        urlCell.textContent = service.url;
+
+        const healthcheckUrlCell = document.createElement('td');
+        healthcheckUrlCell.textContent = service.healthCheckUrl;
+
+        const checkIntervalCell = document.createElement('td');
+        checkIntervalCell.textContent = service.healthCheckInterval;
+
+        row.append(numberCell, idCell, urlCell, healthcheckUrlCell, checkIntervalCell);
+
+        table.append(row);
+      }
+
+      container.append(heading, table);
+    }
+  }
+</script>
+</html>

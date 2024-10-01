@@ -1,0 +1,8 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+WORKDIR /app
+
+COPY ServiceDiscovery.csproj .
+RUN dotnet restore ServiceDiscovery.csproj
+COPY . .
+
+ENTRYPOINT ["dotnet", "watch", "--no-hot-reload", "run", "--config", "Debug", "--no-restore", "--project", "ServiceDiscovery.csproj"]
