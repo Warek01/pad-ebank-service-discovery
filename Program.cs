@@ -1,11 +1,14 @@
 using Asp.Versioning;
 using Serilog;
-using Serilog.Events;
 using ServiceDiscovery.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseKestrel();
+Log.Logger = new LoggerConfiguration()
+  .ReadFrom.Configuration(builder.Configuration)
+  .Enrich.FromLogContext()
+  .CreateLogger();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -22,12 +25,7 @@ builder.Services.AddApiVersioning(options => {
 });
 builder.Services.AddSingleton<RegistryService>();
 builder.Services.AddSingleton<HealthCheckService>();
-builder.Services.AddSerilog(options => {
-  options.WriteTo.Console();
-  options.MinimumLevel.Information();
-  options.MinimumLevel.Override("Microsoft", LogEventLevel.Warning);
-  options.MinimumLevel.Override("System", LogEventLevel.Debug);
-});
+builder.Services.AddSerilog();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
