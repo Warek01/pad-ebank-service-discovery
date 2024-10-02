@@ -1,10 +1,14 @@
 using System.ComponentModel;
+using System.Text.Json;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using ServiceDiscovery.Dtos.Request;
 using ServiceDiscovery.Dtos.Response;
+using ServiceDiscovery.Helpers;
 using ServiceDiscovery.Models;
 using ServiceDiscovery.Services;
+using StackExchange.Redis;
 
 namespace ServiceDiscovery.Controllers;
 
@@ -13,19 +17,30 @@ namespace ServiceDiscovery.Controllers;
 [Route("Api/v{v:apiVersion}/[controller]")]
 public class RegistryController(
   RegistryService registryService,
-  HealthCheckService healthCheckService
+  IConnectionMultiplexer connectionMultiplexer,
+  IOptions<JsonOptions> jsonOptions
 ) : ControllerBase {
+  private readonly IDatabase _redis = connectionMultiplexer.GetDatabase();
+
   [HttpGet]
-  public ActionResult<DashboardInstanceDto> GetAllInstances() {
+  public async Task<ActionResult<DashboardInstanceDto>> GetAllInstances() {
+    string? cache = await _redis.StringGetAsync(CacheKeys.DashboardInstanceDtos);
+
+    if (cache is not null) {
+      return Ok(cache);
+    }
+
     List<DashboardInstanceDto> res = registryService.GetAll()
       .Select(e => new DashboardInstanceDto {
-        Id = e.Id,
         Url = e.Url,
         Name = e.Name,
         HealthCheckInterval = e.HealthCheck.Interval,
         HealthCheckUrl = e.HealthCheck.Url,
       })
       .ToList();
+
+    cache = JsonSerializer.Serialize(res, jsonOptions.Value.JsonSerializerOptions);
+    await _redis.StringSetAsync(CacheKeys.DashboardInstanceDtos, cache, TimeSpan.FromSeconds(60));
 
     return Ok(res);
   }
@@ -34,7 +49,6 @@ public class RegistryController(
   public ActionResult<List<InstanceDto>> GetInstances([DefaultValue("TestService")] string name) {
     List<InstanceDto> res = registryService.GetByName(name)
       .Select(e => new InstanceDto {
-        Id = e.Id,
         Url = e.Url,
       })
       .ToList();
@@ -43,35 +57,34 @@ public class RegistryController(
   }
 
   [HttpPost]
-  public ActionResult Register(RegisterServiceDto dto) {
+  public async Task<ActionResult> Register(RegisterServiceDto dto) {
     if (registryService.Has(dto.Id)) {
       return Created();
     }
 
     var entry = new RegistryEntry {
-      Id = dto.Id,
-      Name = dto.Name,
       Url = dto.Url,
+      Name = dto.Name,
       HealthCheck = new RegistryEntry.HealthCheckEntry {
         Url = dto.HealthCheckUrl,
         Interval = dto.HealthCheckInterval,
       },
     };
 
-    registryService.Add(entry);
-    _ = healthCheckService.ScheduleHealthChecks(entry);
+    await registryService.Add(entry);
+    await _redis.KeyDeleteAsync(CacheKeys.DashboardInstanceDtos);
 
     return Created();
   }
 
   [HttpDelete("{id}")]
-  public ActionResult Unregister([DefaultValue("bafae5fc-aefe-462b-a57c-e3ce21cf2fe5")] string id) {
+  public async Task<ActionResult> Unregister([DefaultValue("bafae5fc-aefe-462b-a57c-e3ce21cf2fe5")] string id) {
     if (!registryService.Has(id)) {
       return NotFound();
     }
 
     RegistryEntry entry = registryService.GetById(id)!;
-    registryService.Remove(entry);
+    await registryService.Remove(entry);
 
     return Ok();
   }

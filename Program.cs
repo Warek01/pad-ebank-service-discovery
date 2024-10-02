@@ -1,10 +1,12 @@
 using Asp.Versioning;
 using Serilog;
 using ServiceDiscovery.Services;
+using StackExchange.Redis;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseKestrel();
+
 Log.Logger = new LoggerConfiguration()
   .ReadFrom.Configuration(builder.Configuration)
   .Enrich.FromLogContext()
@@ -24,11 +26,11 @@ builder.Services.AddApiVersioning(options => {
   options.SubstituteApiVersionInUrl = true;
 });
 builder.Services.AddSingleton<RegistryService>();
-builder.Services.AddSingleton<HealthCheckService>();
 builder.Services.AddSerilog();
 builder.Services.AddProblemDetails();
+SetupRedis();
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 app.UseSerilogRequestLogging();
 app.UseSwagger();
@@ -38,9 +40,40 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
 
-string httpScheme = Environment.GetEnvironmentVariable("HTTP_SCHEME")!;
-string httpHost = Environment.GetEnvironmentVariable("HTTP_HOST")!;
-string httpPort = Environment.GetEnvironmentVariable("HTTP_PORT")!;
-string httpUrl = $"{httpScheme}://{httpHost}:{httpPort}";
+RegistryService registryService = app.Services.GetService<RegistryService>()!;
+_ = registryService.StartFromCache();
 
-app.Run(httpUrl);
+Run();
+
+return;
+
+void Run() {
+  string scheme = Environment.GetEnvironmentVariable("HTTP_SCHEME")!;
+  string host = Environment.GetEnvironmentVariable("HTTP_HOST")!;
+  string port = Environment.GetEnvironmentVariable("HTTP_PORT")!;
+  string url = $"{scheme}://{host}:{port}";
+
+  app.Run(url);
+}
+
+void SetupRedis() {
+  string host = Environment.GetEnvironmentVariable("REDIS_HOST")!;
+  string port = Environment.GetEnvironmentVariable("REDIS_PORT")!;
+  int db = int.Parse(Environment.GetEnvironmentVariable("REDIS_DB")!);
+  string user = Environment.GetEnvironmentVariable("REDIS_USER")!;
+  string password = Environment.GetEnvironmentVariable("REDIS_PASSWORD")!;
+
+  var options = new ConfigurationOptions {
+    Protocol = RedisProtocol.Resp3,
+    EndPoints = { $"{host}:{port}" },
+    Password = password,
+    User = user,
+    DefaultDatabase = db,
+    Ssl = false,
+    AllowAdmin = false,
+    ConnectRetry = 3,
+    ConnectTimeout = 5000,
+  };
+
+  builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(options));
+}

@@ -77,7 +77,7 @@
       table.setAttribute('border', '1');
 
       const headerRow = document.createElement('tr');
-      const headers = ['No', 'Service ID', 'Service URL', 'Healthcheck URL', 'Check Interval'];
+      const headers = ['No', 'Service URL', 'Healthcheck URL', 'Check Interval'];
 
       headers.forEach(headerText => {
         const th = document.createElement('th');
@@ -94,9 +94,6 @@
         const numberCell = document.createElement('td');
         numberCell.textContent = ++i;
 
-        const idCell = document.createElement('td');
-        idCell.textContent = service.id;
-
         const urlCell = document.createElement('td');
         urlCell.textContent = service.url;
 
@@ -106,7 +103,7 @@
         const checkIntervalCell = document.createElement('td');
         checkIntervalCell.textContent = service.healthCheckInterval;
 
-        row.append(numberCell, idCell, urlCell, healthcheckUrlCell, checkIntervalCell);
+        row.append(numberCell, urlCell, healthcheckUrlCell, checkIntervalCell);
 
         table.append(row);
       }
