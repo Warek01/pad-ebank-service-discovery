@@ -58,7 +58,7 @@ public class RegistryController(
 
   [HttpPost]
   public async Task<ActionResult> Register(RegisterServiceDto dto) {
-    if (registryService.Has(dto.Id)) {
+    if (registryService.Has(dto.Url)) {
       return Created();
     }
 
@@ -78,12 +78,12 @@ public class RegistryController(
   }
 
   [HttpDelete("{id}")]
-  public async Task<ActionResult> Unregister([DefaultValue("bafae5fc-aefe-462b-a57c-e3ce21cf2fe5")] string id) {
-    if (!registryService.Has(id)) {
+  public async Task<ActionResult> Unregister(string url) {
+    if (!registryService.Has(url)) {
       return NotFound();
     }
 
-    RegistryEntry entry = registryService.GetById(id)!;
+    RegistryEntry entry = registryService.GetByUrl(url)!;
     await registryService.Remove(entry);
 
     return Ok();

@@ -75,7 +75,7 @@ public class RegistryService : IDisposable {
     }
   }
 
-  public RegistryEntry? GetById(string url) {
+  public RegistryEntry? GetByUrl(string url) {
     lock (_registryLock) {
       return _registry.FirstOrDefault(entry => entry.Url == url);
     }
