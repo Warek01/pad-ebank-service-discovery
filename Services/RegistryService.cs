@@ -45,9 +45,9 @@ public class RegistryService : IDisposable {
     GC.SuppressFinalize(this);
   }
 
-  public bool Has(string url) {
+  public bool Has(string host) {
     lock (_registryLock) {
-      return _registry.Any(entry => entry.Url == url);
+      return _registry.Any(entry => entry.Host == host);
     }
   }
 
@@ -75,9 +75,9 @@ public class RegistryService : IDisposable {
     }
   }
 
-  public RegistryEntry? GetByUrl(string url) {
+  public RegistryEntry? GetByHost(string host) {
     lock (_registryLock) {
-      return _registry.FirstOrDefault(entry => entry.Url == url);
+      return _registry.FirstOrDefault(entry => entry.Host == host);
     }
   }
 
@@ -118,14 +118,13 @@ public class RegistryService : IDisposable {
   }
 
   private async Task ScheduleHealthChecks(RegistryEntry entry) {
-    string name = $"{entry.Url} ({entry.Name})";
     int retries = int.Parse(Environment.GetEnvironmentVariable("HEALTHCHECK_REQUEST_RETRIES")!);
     int retryDelay = int.Parse(Environment.GetEnvironmentVariable("HEALTHCHECK_REQUEST_RETRY_DELAY")!);
     int retiresLeft = retries;
     bool fail = false;
 
     while (retiresLeft >= 0 && !_cts.Token.IsCancellationRequested) {
-      TimeSpan waitFor = TimeSpan.FromSeconds(fail ? retryDelay : entry.HealthCheck.Interval);
+      TimeSpan waitFor = TimeSpan.FromSeconds(fail ? retryDelay : entry.HealthCheckInterval);
       await Task.Delay(waitFor, _cts.Token);
 
       if (!Has(entry)) {
@@ -133,19 +132,19 @@ public class RegistryService : IDisposable {
       }
 
       try {
-        HttpResponseMessage res = await _httpClient.GetAsync(new Uri(entry.HealthCheck.Url), _cts.Token);
+        HttpResponseMessage res = await _httpClient.GetAsync(new Uri(entry.HealthCheckUrl), _cts.Token);
         res.EnsureSuccessStatusCode();
         fail = false;
         retiresLeft = retries;
       }
       catch (HttpRequestException e) {
-        _logger.LogInformation($"Health check error for {name}; Retries left: {retiresLeft}; Reason: {e.Message}");
+        _logger.LogInformation($"Health check error for {entry}; Retries left: {retiresLeft}; Reason: {e.Message}");
         retiresLeft--;
         fail = true;
       }
     }
 
     await Remove(entry);
-    _logger.LogInformation($"Service {name} removed from registry due to failed health checks");
+    _logger.LogInformation($"Service {entry} removed from registry due to failed health checks");
   }
 }

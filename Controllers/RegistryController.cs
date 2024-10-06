@@ -32,10 +32,12 @@ public class RegistryController(
 
     List<DashboardInstanceDto> res = registryService.GetAll()
       .Select(e => new DashboardInstanceDto {
-        Url = e.Url,
+        HealthCheckInterval = e.HealthCheckInterval,
+        HealthCheckUrl = e.HealthCheckUrl,
         Name = e.Name,
-        HealthCheckInterval = e.HealthCheck.Interval,
-        HealthCheckUrl = e.HealthCheck.Url,
+        Scheme = e.Scheme,
+        Host = e.Host,
+        Port = e.Port,
       })
       .ToList();
 
@@ -45,11 +47,13 @@ public class RegistryController(
     return Ok(res);
   }
 
-  [HttpGet("Instances/{name}")]
+  [HttpGet("{name}")]
   public ActionResult<List<InstanceDto>> GetInstances([DefaultValue("TestService")] string name) {
     List<InstanceDto> res = registryService.GetByName(name)
       .Select(e => new InstanceDto {
-        Url = e.Url,
+        Host = e.Host,
+        Port = e.Port,
+        Scheme = e.Scheme,
       })
       .ToList();
 
@@ -58,17 +62,17 @@ public class RegistryController(
 
   [HttpPost]
   public async Task<ActionResult> Register(RegisterServiceDto dto) {
-    if (registryService.Has(dto.Url)) {
+    if (registryService.Has(dto.Host)) {
       return Created();
     }
 
     var entry = new RegistryEntry {
-      Url = dto.Url,
+      HealthCheckUrl = dto.HealthCheckUrl,
+      HealthCheckInterval = dto.HealthCheckInterval,
       Name = dto.Name,
-      HealthCheck = new RegistryEntry.HealthCheckEntry {
-        Url = dto.HealthCheckUrl,
-        Interval = dto.HealthCheckInterval,
-      },
+      Scheme = dto.Scheme,
+      Host = dto.Host,
+      Port = dto.Port,
     };
 
     await registryService.Add(entry);
@@ -83,7 +87,7 @@ public class RegistryController(
       return NotFound();
     }
 
-    RegistryEntry entry = registryService.GetByUrl(url)!;
+    RegistryEntry entry = registryService.GetByHost(url)!;
     await registryService.Remove(entry);
 
     return Ok();
