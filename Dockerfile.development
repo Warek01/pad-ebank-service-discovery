@@ -5,4 +5,4 @@ COPY ServiceDiscovery.csproj .
 RUN dotnet restore ServiceDiscovery.csproj
 COPY . .
 
-ENTRYPOINT ["dotnet", "watch", "--no-hot-reload", "run", "--config", "Debug", "--no-restore", "--project", "ServiceDiscovery.csproj"]
+ENTRYPOINT ["dotnet", "run", "--config", "Release", "--no-restore", "--project", "ServiceDiscovery.csproj"]

@@ -86,7 +86,10 @@ public class RegistryService : IDisposable {
       _registry.Remove(entry);
     }
 
-    await _redis.KeyDeleteAsync(CacheKeys.DashboardInstanceDtos);
+    await Task.WhenAll(
+      _redis.KeyDeleteAsync(CacheKeys.DashboardInstanceDtos),
+      _redis.KeyDeleteAsync(CacheKeys.Registry)
+    );
   }
 
   public List<RegistryEntry> GetAll() {

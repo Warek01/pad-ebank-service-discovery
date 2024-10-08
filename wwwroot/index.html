@@ -47,7 +47,7 @@
 
 <script>
   let services = {};
-  fetchFn().then(update)
+  fetchFn().then(update);
   setInterval(fetchFn, 2000);
 
   async function fetchFn() {
@@ -95,7 +95,7 @@
         numberCell.textContent = ++i;
 
         const urlCell = document.createElement('td');
-        urlCell.textContent = service.url;
+        urlCell.textContent = `${service.scheme}://${service.host}:${service.port}`;
 
         const healthcheckUrlCell = document.createElement('td');
         healthcheckUrlCell.textContent = service.healthCheckUrl;
