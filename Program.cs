@@ -40,9 +40,6 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
 
-RegistryService registryService = app.Services.GetService<RegistryService>()!;
-_ = registryService.StartFromCache();
-
 Run();
 
 return;

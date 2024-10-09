@@ -75,19 +75,19 @@ public class RegistryController(
       Port = dto.Port,
     };
 
-    await registryService.Add(entry);
+    registryService.Add(entry);
     await _redis.KeyDeleteAsync(CacheKeys.DashboardInstanceDtos);
 
     return Created();
   }
 
-  [HttpDelete("{id}")]
-  public async Task<ActionResult> Unregister(string url) {
-    if (!registryService.Has(url)) {
+  [HttpDelete("{host}")]
+  public async Task<ActionResult> Unregister(string host) {
+    if (!registryService.Has(host)) {
       return NotFound();
     }
 
-    RegistryEntry entry = registryService.GetByHost(url)!;
+    RegistryEntry entry = registryService.GetByHost(host)!;
     await registryService.Remove(entry);
 
     return Ok();
