@@ -1,4 +1,7 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+
+RUN apt update && apt install -y curl
+
 USER $APP_UID
 WORKDIR /app
 
@@ -18,4 +21,8 @@ RUN dotnet publish "ServiceDiscovery.csproj" -c $BUILD_CONFIGURATION -o /app/pub
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+EXPOSE 3000
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3  CMD curl --fail http://localhost:3000/healthz || exit
+
 ENTRYPOINT ["dotnet", "ServiceDiscovery.dll"]

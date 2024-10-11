@@ -28,6 +28,7 @@ builder.Services.AddApiVersioning(options => {
 builder.Services.AddSingleton<RegistryService>();
 builder.Services.AddSerilog();
 builder.Services.AddProblemDetails();
+builder.Services.AddHealthChecks();
 SetupRedis();
 
 WebApplication app = builder.Build();
@@ -38,6 +39,7 @@ app.UseSwaggerUI();
 app.UseAuthorization();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.MapHealthChecks("/healthz");
 app.MapControllers();
 
 Run();
