@@ -18,6 +18,9 @@ public class RegisterServiceDto {
   [DefaultValue("example.com/healthz")]
   public string HealthCheckUrl { get; set; } = null!;
 
+  [DefaultValue("example.com")]
+  public string HealthPingUrl { get; set; } = null!;
+
   [DefaultValue(30)]
   public int HealthCheckInterval { get; set; }
 }

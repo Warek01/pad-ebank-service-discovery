@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http.Json;
-using Microsoft.Extensions.Options;
 using ServiceDiscovery.Helpers;
 using ServiceDiscovery.Models;
 using StackExchange.Redis;
@@ -13,17 +11,14 @@ public class RegistryService : IDisposable {
    private readonly CancellationTokenSource _cts = new();
    private readonly ILogger _logger;
    private readonly HttpClient _httpClient;
-   private readonly JsonOptions _jsonOptions;
 
    public RegistryService(
       IHttpClientFactory httpClientFactory,
       ILogger<RegistryService> logger,
-      IOptions<JsonOptions> jsonOptions,
       IConnectionMultiplexer connectionMultiplexer
    ) {
       _redis = connectionMultiplexer.GetDatabase();
       _logger = logger;
-      _jsonOptions = jsonOptions.Value;
       _httpClient = httpClientFactory.CreateClient();
 
       int timeout = int.Parse(Environment.GetEnvironmentVariable("HEALTHCHECK_REQUEST_TIMEOUT")!);
@@ -85,10 +80,10 @@ public class RegistryService : IDisposable {
       int retries = int.Parse(Environment.GetEnvironmentVariable("HEALTHCHECK_REQUEST_RETRIES")!);
       int retryDelay = int.Parse(Environment.GetEnvironmentVariable("HEALTHCHECK_REQUEST_RETRY_DELAY")!);
       int retiresLeft = retries;
-      bool fail = false;
+      bool previouslyFailed = false;
 
       while (retiresLeft >= 0 && !_cts.Token.IsCancellationRequested) {
-         TimeSpan waitFor = TimeSpan.FromSeconds(fail ? retryDelay : entry.HealthCheckInterval);
+         TimeSpan waitFor = TimeSpan.FromSeconds(previouslyFailed ? retryDelay : entry.HealthCheckInterval);
          await Task.Delay(waitFor, _cts.Token);
 
          if (!Has(entry)) {
@@ -98,13 +93,13 @@ public class RegistryService : IDisposable {
          try {
             HttpResponseMessage res = await _httpClient.GetAsync(new Uri(entry.HealthCheckUrl), _cts.Token);
             res.EnsureSuccessStatusCode();
-            fail = false;
+            previouslyFailed = false;
             retiresLeft = retries;
          }
          catch (HttpRequestException e) {
             _logger.LogInformation($"Health check error for {entry}; Retries left: {retiresLeft}; Reason: {e.Message}");
             retiresLeft--;
-            fail = true;
+            previouslyFailed = true;
          }
       }
 

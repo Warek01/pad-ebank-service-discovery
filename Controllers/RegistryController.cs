@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Text.Json;
-using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using ServiceDiscovery.Dtos.Request;
@@ -13,8 +12,7 @@ using StackExchange.Redis;
 namespace ServiceDiscovery.Controllers;
 
 [ApiController]
-[ApiVersion(1)]
-[Route("Api/v{v:apiVersion}/[controller]")]
+[Route("Api/v{v:apiVersion}/Registry")]
 public class RegistryController(
   RegistryService registryService,
   IConnectionMultiplexer connectionMultiplexer,
@@ -69,6 +67,7 @@ public class RegistryController(
     var entry = new RegistryEntry {
       HealthCheckUrl = dto.HealthCheckUrl,
       HealthCheckInterval = dto.HealthCheckInterval,
+      HealthPingUrl = dto.HealthPingUrl,
       Name = dto.Name,
       Scheme = dto.Scheme,
       Host = dto.Host,
