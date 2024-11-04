@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Microsoft.OpenApi.Models;
+using Prometheus;
 using Serilog;
 using ServiceDiscovery.Services;
 using StackExchange.Redis;
@@ -24,6 +25,7 @@ builder.Services.AddSwaggerGen(options => {
    options.EnableAnnotations();
 });
 builder.Services.AddHttpClient();
+builder.Services.UseHttpClientMetrics();
 builder.Services.AddApiVersioning(options => {
    options.ReportApiVersions = true;
    options.AssumeDefaultVersionWhenUnspecified = true;
@@ -51,6 +53,8 @@ app.UseSwaggerUI(options => {
    options.DocumentTitle = "Service Discovery Docs";
    options.RoutePrefix = "Api/Docs";
 });
+app.UseMetricServer();
+app.UseHttpMetrics();
 app.UseAuthorization();
 app.UseDefaultFiles();
 app.UseStaticFiles();
