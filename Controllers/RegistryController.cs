@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using ServiceDiscovery.Dtos.Request;
 using ServiceDiscovery.Dtos.Response;
 using ServiceDiscovery.Helpers;
 using ServiceDiscovery.Models;
@@ -14,81 +13,87 @@ namespace ServiceDiscovery.Controllers;
 [ApiController]
 [Route("Api/v{v:apiVersion}/Registry")]
 public class RegistryController(
-  RegistryService registryService,
-  IConnectionMultiplexer connectionMultiplexer,
-  IOptions<JsonOptions> jsonOptions
+   RegistryService registryService,
+   IConnectionMultiplexer connectionMultiplexer,
+   IOptions<JsonOptions> jsonOptions
 ) : ControllerBase {
-  private readonly IDatabase _redis = connectionMultiplexer.GetDatabase();
+   private readonly IDatabase _redis = connectionMultiplexer.GetDatabase();
 
-  [HttpGet]
-  public async Task<ActionResult<DashboardInstanceDto>> GetAllInstances() {
-    string? cache = await _redis.StringGetAsync(CacheKeys.DashboardInstanceDtos);
+   [HttpGet]
+   public async Task<ActionResult<RegistryEntry>> GetAllInstances() {
+      string? cache = await _redis.StringGetAsync(CacheKeys.DashboardInstanceDtos);
 
-    if (cache is not null) {
-      return Ok(cache);
-    }
+      if (cache is not null) {
+         return Ok(cache);
+      }
 
-    List<DashboardInstanceDto> res = registryService.GetAll()
-      .Select(e => new DashboardInstanceDto {
-        HealthCheckInterval = e.HealthCheckInterval,
-        HealthCheckUrl = e.HealthCheckUrl,
-        Name = e.Name,
-        Scheme = e.Scheme,
-        Host = e.Host,
-        Port = e.Port,
-      })
-      .ToList();
+      List<RegistryEntry> res = registryService.GetAll();
 
-    cache = JsonSerializer.Serialize(res, jsonOptions.Value.JsonSerializerOptions);
-    await _redis.StringSetAsync(CacheKeys.DashboardInstanceDtos, cache, TimeSpan.FromSeconds(60));
+      cache = JsonSerializer.Serialize(res, jsonOptions.Value.JsonSerializerOptions);
+      await _redis.StringSetAsync(CacheKeys.DashboardInstanceDtos, cache, TimeSpan.FromSeconds(60));
 
-    return Ok(res);
-  }
+      return Ok(res);
+   }
 
-  [HttpGet("{name}")]
-  public ActionResult<List<InstanceDto>> GetInstances([DefaultValue("TestService")] string name) {
-    List<InstanceDto> res = registryService.GetByName(name)
-      .Select(e => new InstanceDto {
-        Host = e.Host,
-        Port = e.Port,
-        Scheme = e.Scheme,
-      })
-      .ToList();
+   [HttpGet("{name}")]
+   public ActionResult GetInstances(
+      [DefaultValue("TestService")] string name,
+      [FromQuery] string format = "default"
+   ) {
+      switch (format.ToLower()) {
+         case "default": {
+            return Ok(registryService.GetByName(name));
+         }
+         case "prometheus": {
+            if (!registryService.HasServiceByName(name)) {
+               return NotFound();
+            }
+            
+            Dictionary<string, PrometheusInstanceDto> dict = new Dictionary<string, PrometheusInstanceDto>();
+            List<RegistryEntry> entries = registryService.GetByName(name);
 
-    return Ok(res);
-  }
+            foreach (RegistryEntry entry in entries) {
+               if (!dict.TryGetValue(entry.Name, out PrometheusInstanceDto? value)) {
+                  value = new PrometheusInstanceDto {
+                     Targets = [],
+                     Labels = new Dictionary<string, string> {
+                        { "job", entry.Name },
+                     },
+                  };
+                  dict[entry.Name] = value;
+               }
 
-  [HttpPost]
-  public async Task<ActionResult> Register(RegisterServiceDto dto) {
-    if (registryService.Has(dto.Host)) {
+               value.Targets.Add($"{entry.HttpUri!.Host}:{entry.HttpUri!.Port}");
+            }
+
+            return Ok(dict.Values);
+         }
+         default:
+            return BadRequest("Unknown format");
+      }
+   }
+
+   [HttpPost]
+   public async Task<ActionResult> Register(RegistryEntry entry) {
+      if (registryService.HasServiceById(entry.Id)) {
+         return Created();
+      }
+
+      registryService.Add(entry);
+      await _redis.KeyDeleteAsync(CacheKeys.DashboardInstanceDtos);
+
       return Created();
-    }
+   }
 
-    var entry = new RegistryEntry {
-      HealthCheckUrl = dto.HealthCheckUrl,
-      HealthCheckInterval = dto.HealthCheckInterval,
-      HealthPingUrl = dto.HealthPingUrl,
-      Name = dto.Name,
-      Scheme = dto.Scheme,
-      Host = dto.Host,
-      Port = dto.Port,
-    };
+   [HttpDelete("{id}")]
+   public async Task<ActionResult> Unregister(string id) {
+      if (!registryService.HasServiceById(id)) {
+         return NotFound();
+      }
 
-    registryService.Add(entry);
-    await _redis.KeyDeleteAsync(CacheKeys.DashboardInstanceDtos);
+      RegistryEntry entry = registryService.GetById(id)!;
+      await registryService.Remove(entry);
 
-    return Created();
-  }
-
-  [HttpDelete("{host}")]
-  public async Task<ActionResult> Unregister(string host) {
-    if (!registryService.Has(host)) {
-      return NotFound();
-    }
-
-    RegistryEntry entry = registryService.GetByHost(host)!;
-    await registryService.Remove(entry);
-
-    return Ok();
-  }
+      return Ok();
+   }
 }

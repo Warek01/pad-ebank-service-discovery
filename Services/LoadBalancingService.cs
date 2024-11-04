@@ -1,14 +1,10 @@
-using Microsoft.AspNetCore.Http.Json;
-using Microsoft.Extensions.Options;
 using ServiceDiscovery.Models;
 
 namespace ServiceDiscovery.Services;
 
 public class LoadBalancingService(
    RegistryService registryService,
-   IOptions<JsonOptions> jsonOptions,
-   IHttpClientFactory httpClientFactory,
-   ILogger<LoadBalancingService> logger
+   IHttpClientFactory httpClientFactory
 ) {
    private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
 
@@ -23,7 +19,7 @@ public class LoadBalancingService(
 
       foreach (RegistryEntry entry in entries) {
          async Task<RegistryEntry> RequestCallback() {
-            await _httpClient.GetAsync(entry.HealthPingUrl);
+            await _httpClient.GetAsync(entry.HealthPingUri);
             return entry;
          }
          

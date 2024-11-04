@@ -30,13 +30,7 @@ public class RegistryService : IDisposable {
       GC.SuppressFinalize(this);
    }
 
-   public bool Has(string host) {
-      lock (_registryLock) {
-         return _registry.Any(entry => entry.Host == host);
-      }
-   }
-
-   public bool Has(RegistryEntry entry) {
+   public bool HasEntry(RegistryEntry entry) {
       lock (_registryLock) {
          return _registry.Contains(entry);
       }
@@ -56,9 +50,9 @@ public class RegistryService : IDisposable {
       }
    }
 
-   public RegistryEntry? GetByHost(string host) {
+   public RegistryEntry? GetById(string id) {
       lock (_registryLock) {
-         return _registry.FirstOrDefault(entry => entry.Host == host);
+         return _registry.FirstOrDefault(entry => entry.Id == id);
       }
    }
 
@@ -86,12 +80,12 @@ public class RegistryService : IDisposable {
          TimeSpan waitFor = TimeSpan.FromSeconds(previouslyFailed ? retryDelay : entry.HealthCheckInterval);
          await Task.Delay(waitFor, _cts.Token);
 
-         if (!Has(entry)) {
+         if (!HasEntry(entry)) {
             return;
          }
 
          try {
-            HttpResponseMessage res = await _httpClient.GetAsync(new Uri(entry.HealthCheckUrl), _cts.Token);
+            HttpResponseMessage res = await _httpClient.GetAsync(entry.HealthCheckUri, _cts.Token);
             res.EnsureSuccessStatusCode();
             previouslyFailed = false;
             retiresLeft = retries;
@@ -105,5 +99,17 @@ public class RegistryService : IDisposable {
 
       await Remove(entry);
       _logger.LogInformation($"Service {entry} removed from registry due to failed health checks");
+   }
+
+   public bool HasServiceByName(string name) {
+      lock (_registryLock) {
+         return _registry.Any(entry => entry.Name == name);
+      }
+   }
+   
+   public bool HasServiceById(string id) {
+      lock (_registryLock) {
+         return _registry.Any(entry => entry.Id == id);
+      }
    }
 }
