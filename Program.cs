@@ -3,7 +3,6 @@ using Microsoft.OpenApi.Models;
 using Prometheus;
 using Serilog;
 using ServiceDiscovery.Services;
-using StackExchange.Redis;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +39,6 @@ builder.Services.AddSingleton<LoadBalancingService>();
 builder.Services.AddSerilog();
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
-SetupRedis();
 
 WebApplication app = builder.Build();
 
@@ -72,26 +70,4 @@ void Run() {
    string url = $"{scheme}://{host}:{port}";
 
    app.Run(url);
-}
-
-void SetupRedis() {
-   string host = Environment.GetEnvironmentVariable("REDIS_HOST")!;
-   string port = Environment.GetEnvironmentVariable("REDIS_PORT")!;
-   int db = int.Parse(Environment.GetEnvironmentVariable("REDIS_DB")!);
-   string user = Environment.GetEnvironmentVariable("REDIS_USER")!;
-   string password = Environment.GetEnvironmentVariable("REDIS_PASSWORD")!;
-
-   var options = new ConfigurationOptions {
-      Protocol = RedisProtocol.Resp3,
-      EndPoints = { $"{host}:{port}" },
-      Password = password,
-      User = user,
-      DefaultDatabase = db,
-      Ssl = false,
-      AllowAdmin = false,
-      ConnectRetry = 3,
-      ConnectTimeout = 5000,
-   };
-
-   builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(options));
 }

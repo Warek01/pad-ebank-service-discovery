@@ -1,11 +1,8 @@
-using ServiceDiscovery.Helpers;
 using ServiceDiscovery.Models;
-using StackExchange.Redis;
 
 namespace ServiceDiscovery.Services;
 
 public class RegistryService : IDisposable {
-   private readonly IDatabase _redis;
    private readonly List<RegistryEntry> _registry = [];
    private readonly object _registryLock = new();
    private readonly CancellationTokenSource _cts = new();
@@ -14,10 +11,8 @@ public class RegistryService : IDisposable {
 
    public RegistryService(
       IHttpClientFactory httpClientFactory,
-      ILogger<RegistryService> logger,
-      IConnectionMultiplexer connectionMultiplexer
+      ILogger<RegistryService> logger
    ) {
-      _redis = connectionMultiplexer.GetDatabase();
       _logger = logger;
       _httpClient = httpClientFactory.CreateClient();
 
@@ -56,12 +51,10 @@ public class RegistryService : IDisposable {
       }
    }
 
-   public async Task Remove(RegistryEntry entry) {
+   public void Remove(RegistryEntry entry) {
       lock (_registryLock) {
          _registry.Remove(entry);
       }
-
-      await _redis.KeyDeleteAsync(CacheKeys.DashboardInstanceDtos);
    }
 
    public List<RegistryEntry> GetAll() {
@@ -97,7 +90,7 @@ public class RegistryService : IDisposable {
          }
       }
 
-      await Remove(entry);
+      Remove(entry);
       _logger.LogInformation($"Service {entry} removed from registry due to failed health checks");
    }
 

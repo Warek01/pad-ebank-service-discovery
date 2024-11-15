@@ -1,38 +1,19 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using ServiceDiscovery.Dtos.Response;
-using ServiceDiscovery.Helpers;
 using ServiceDiscovery.Models;
 using ServiceDiscovery.Services;
-using StackExchange.Redis;
 
 namespace ServiceDiscovery.Controllers;
 
 [ApiController]
 [Route("Api/v{v:apiVersion}/Registry")]
 public class RegistryController(
-   RegistryService registryService,
-   IConnectionMultiplexer connectionMultiplexer,
-   IOptions<JsonOptions> jsonOptions
+   RegistryService registryService
 ) : ControllerBase {
-   private readonly IDatabase _redis = connectionMultiplexer.GetDatabase();
-
    [HttpGet]
-   public async Task<ActionResult<RegistryEntry>> GetAllInstances() {
-      string? cache = await _redis.StringGetAsync(CacheKeys.DashboardInstanceDtos);
-
-      if (cache is not null) {
-         return Ok(cache);
-      }
-
-      List<RegistryEntry> res = registryService.GetAll();
-
-      cache = JsonSerializer.Serialize(res, jsonOptions.Value.JsonSerializerOptions);
-      await _redis.StringSetAsync(CacheKeys.DashboardInstanceDtos, cache, TimeSpan.FromSeconds(60));
-
-      return Ok(res);
+   public ActionResult<RegistryEntry> GetAllInstances() {
+      return Ok(registryService.GetAll());
    }
 
    [HttpGet("{name}")]
@@ -74,25 +55,24 @@ public class RegistryController(
    }
 
    [HttpPost]
-   public async Task<ActionResult> Register(RegistryEntry entry) {
+   public ActionResult Register(RegistryEntry entry) {
       if (registryService.HasServiceById(entry.Id)) {
          return Created();
       }
 
       registryService.Add(entry);
-      await _redis.KeyDeleteAsync(CacheKeys.DashboardInstanceDtos);
 
       return Created();
    }
 
    [HttpDelete("{id}")]
-   public async Task<ActionResult> Unregister(string id) {
+   public ActionResult Unregister(string id) {
       if (!registryService.HasServiceById(id)) {
          return NotFound();
       }
 
       RegistryEntry entry = registryService.GetById(id)!;
-      await registryService.Remove(entry);
+      registryService.Remove(entry);
 
       return Ok();
    }
